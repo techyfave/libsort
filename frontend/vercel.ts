@@ -1,16 +1,15 @@
-import type { VercelConfig } from '@vercel/config/v1';
+import { routes, deploymentEnv, type VercelConfig } from '@vercel/config/v1';
 
-const backend = process.env.BACKEND_URL?.replace(/\/$/, '');
-if (!backend || !/^https:\/\/[^/]+$/.test(backend)) {
-  throw new Error('Set BACKEND_URL to the HTTPS Render service origin, without a path.');
-}
+// Resolved at request time from the Vercel env var BACKEND_URL (Render origin only:
+// https://your-service.onrender.com — no /api suffix). Set it in Vercel before deploy.
+const backendOrigin = deploymentEnv('BACKEND_URL');
 
 export const config: VercelConfig = {
   framework: 'vite',
   buildCommand: 'npm run build',
   outputDirectory: 'dist',
   rewrites: [
-    { source: '/api/:path*', destination: `${backend}/api/:path*` },
+    routes.rewrite('/api/:path*', `${backendOrigin}/api/:path*`),
   ],
   headers: [
     { source: '/(.*)', headers: [
