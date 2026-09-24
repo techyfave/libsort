@@ -27,7 +27,7 @@ npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:5173. Search and the shelf map are public. Use the superuser account for Staff sign in. Manage books, students, floors, sections and shelves at http://127.0.0.1:8000/admin/. There is no default password. The initial local development database also contains a `demo_staff` account with a separately supplied random password; it has workspace access but no admin management permissions. If Python's `ensurepip` is unavailable, create the virtual environment and install with `uv pip install --python .venv/Scripts/python.exe -r requirements.lock.txt`. `requirements.txt` declares supported ranges; `requirements.lock.txt` records the tested installation.
+Open http://127.0.0.1:5173. Search and the shelf map are public. Use the superuser account for Staff sign in. Manage books, students, floors, sections and shelves at http://127.0.0.1:8000/admin/. There is no default password. Deployment can create your admin once using the `DJANGO_SUPERUSER_*` environment variables; see docs/deployment.md. If Python's `ensurepip` is unavailable, create the virtual environment and install with `uv pip install --python .venv/Scripts/python.exe -r requirements.lock.txt`. `requirements.txt` declares supported ranges; `requirements.lock.txt` records the tested installation.
 
 ## Working flow
 

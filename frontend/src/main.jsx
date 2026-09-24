@@ -6,7 +6,9 @@ import './style.css';
 let csrf = '';
 async function api(path, data) {
   const response = await fetch('/api/' + path, { credentials: 'same-origin', ...(data !== undefined ? {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf},body:JSON.stringify(data)} : {}) });
-  const result = await response.json().catch(() => ({detail:'The server could not complete this request.'}));
+  const result = await response.json().catch(() => {
+    throw new Error(`The API returned an unexpected response (HTTP ${response.status}). The server may be waking up, or the frontend API connection needs checking. Please try again shortly.`);
+  });
   if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : Object.entries(result).map(([k,v])=>`${k}: ${v}`).join(' · '));
   return result;
 }

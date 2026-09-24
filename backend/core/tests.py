@@ -1,6 +1,6 @@
 from datetime import timedelta
 from django.contrib.auth.models import User
-from django.core.management import call_command
+from django.core.management import call_command, CommandError
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.utils import timezone
@@ -151,15 +151,40 @@ class LibraryFlowTests(TestCase):
 
 class SeedTests(TestCase):
     def test_deployment_bootstrap_never_resets_existing_account(self):
-        with patch.dict('os.environ', {'DEMO_STAFF_USERNAME':'client_demo','DEMO_STAFF_PASSWORD':'random-demo-secret-7yJ9zK','SEED_DEMO_DATA':'0'}):
+        env = {'DJANGO_SUPERUSER_USERNAME':'client_admin', 'DJANGO_SUPERUSER_EMAIL':'admin@example.com', 'DJANGO_SUPERUSER_PASSWORD':'random-admin-secret-7yJ9zK', 'SEED_DEMO_DATA':'0'}
+        with patch.dict('os.environ', env, clear=True):
             call_command('bootstrap_deployment')
-        user = User.objects.get(username='client_demo')
-        self.assertTrue(user.is_staff)
-        self.assertFalse(user.is_superuser)
-        with patch.dict('os.environ', {'DEMO_STAFF_USERNAME':'client_demo','DEMO_STAFF_PASSWORD':'a-different-password','SEED_DEMO_DATA':'0'}):
+        user = User.objects.get(username='client_admin')
+        self.assertTrue(user.is_staff and user.is_superuser and user.is_active)
+        with patch.dict('os.environ', {'DJANGO_SUPERUSER_USERNAME':'client_admin'}, clear=True):
             call_command('bootstrap_deployment')
         user.refresh_from_db()
-        self.assertTrue(user.check_password('random-demo-secret-7yJ9zK'))
+        self.assertTrue(user.check_password(env['DJANGO_SUPERUSER_PASSWORD']))
+
+    def test_bootstrap_without_configuration_is_optional(self):
+        with patch.dict('os.environ', {}, clear=True):
+            call_command('bootstrap_deployment')
+        self.assertFalse(User.objects.exists())
+
+    def test_bootstrap_rejects_incomplete_or_weak_credentials(self):
+        for env in [
+            {'DJANGO_SUPERUSER_PASSWORD':'secret'},
+            {'DJANGO_SUPERUSER_USERNAME':'admin'},
+            {'DJANGO_SUPERUSER_USERNAME':'admin', 'DJANGO_SUPERUSER_EMAIL':'admin@example.com', 'DJANGO_SUPERUSER_PASSWORD':'password'},
+        ]:
+            with self.subTest(env_keys=list(env)), patch.dict('os.environ', env, clear=True):
+                with self.assertRaises(CommandError):
+                    call_command('bootstrap_deployment')
+        self.assertFalse(User.objects.exists())
+
+    def test_bootstrap_does_not_elevate_existing_staff(self):
+        user = User.objects.create_user('existing_staff', password='original-secret', is_staff=True)
+        with patch.dict('os.environ', {'DJANGO_SUPERUSER_USERNAME':user.username}, clear=True):
+            with self.assertRaises(CommandError):
+                call_command('bootstrap_deployment')
+        user.refresh_from_db()
+        self.assertFalse(user.is_superuser)
+        self.assertTrue(user.check_password('original-secret'))
 
     def test_seed_is_repeatable(self):
         call_command('seed_demo_data')

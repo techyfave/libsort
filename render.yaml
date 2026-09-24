@@ -21,9 +21,11 @@ services:
         sync: false
       - key: SEED_DEMO_DATA
         value: "1"
-      - key: DEMO_STAFF_USERNAME
-        value: demo_staff
-      - key: DEMO_STAFF_PASSWORD
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
         sync: false
 databases:
   - name: libsort-db

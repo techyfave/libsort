@@ -13,17 +13,23 @@ In Render, create a **Blueprint** from the GitHub repository using root `render.
 Supply:
 
 - `DJANGO_CSRF_TRUSTED_ORIGINS`: the exact frontend HTTPS origin, e.g. `https://libsort-yourname.vercel.app`. You can initially leave the value blank until Vercel assigns the final URL, then update Render before logging in. Comma-separate additional known origins; never trust every Vercel tenant.
-- `DEMO_STAFF_PASSWORD`: a new strong secret chosen in Render. Do not use the local development password from the conversation.
+- `DJANGO_SUPERUSER_USERNAME`: a new admin username, e.g. `libsort_admin`.
+- `DJANGO_SUPERUSER_EMAIL`: your email address.
+- `DJANGO_SUPERUSER_PASSWORD`: a new strong password entered privately in Render.
 
-Render generates `DJANGO_SECRET_KEY` and supplies `DATABASE_URL`. Its own hostname is automatically allowed. The build installs locked dependencies and collects admin static files. Startup migrates PostgreSQL, seeds the synthetic demo idempotently, creates `demo_staff` once, then starts Gunicorn. The staff account can use the demo UI but cannot edit admin models. Remove `DEMO_STAFF_PASSWORD` and `DEMO_STAFF_USERNAME` after successful creation. Existing account credentials are never reset on redeployment. Set `SEED_DEMO_DATA=0` after the initial deployment if you want to manage demo records without seeding.
+Keep the Start Command as `bash scripts/render-start.sh`. It runs migrations and `python backend/manage.py bootstrap_deployment` before starting Gunicorn, so no paid shell or pre-deploy command is needed. The bootstrap creates an active superuser once; later starts never reset its password. Existing non-admin usernames are rejected rather than silently promoted. Remove the old `DEMO_STAFF_USERNAME` and `DEMO_STAFF_PASSWORD` environment variables; they are no longer used.
 
-Confirm `https://YOUR-API.onrender.com/api/health/` returns `{"status":"ok"}` and copy the Render origin. For a full admin account use `python backend/manage.py createsuperuser` in a supported service shell or through a secure administrative connection; never expose an account-creation endpoint.
+After a successful deploy, sign in at `https://libsort.onrender.com/admin/` using the new admin. You can also use that account in the frontend Staff sign in. In admin, use Users to create staff, enable their Staff status, and grant only the model permissions they need. Existing staff accounts remain intact and can be managed there.
+
+Remove `DJANGO_SUPERUSER_PASSWORD` after confirming login (or remove all three bootstrap variables). Set `SEED_DEMO_DATA=0` after the initial deployment if you want to manage records without seeding. Render generates `DJANGO_SECRET_KEY` and supplies `DATABASE_URL`; its hostname is automatically allowed. Build collects admin static files.
+
+Confirm `https://libsort.onrender.com/api/health/` returns `{"status":"ok"}`.
 
 ## 3. Vercel frontend
 
 Import the same GitHub repository. Set **Root Directory** to `frontend`, Framework to **Vite**, and Node.js to **22.x**. Keep the repository's build/output configuration.
 
-Set the environment variable **`BACKEND_URL`** to the Render HTTPS origin, e.g. `https://libsort-api-xxxx.onrender.com`, with no `/api` suffix. Set it for Production (and Preview only if needed). `frontend/vercel.ts` reads it when deployment configuration is evaluated and creates the proxy rewrite. Deploy.
+Set the environment variable **`BACKEND_URL`** to the Render HTTPS origin, e.g. `https://libsort-api-xxxx.onrender.com`, with no `/api` suffix or trailing slash. Set it for Production (and Preview only if needed). `frontend/vercel.ts` reads it when deployment configuration is evaluated and creates the proxy rewrite. Deploy.
 
 Copy the stable Vercel production origin into Render's `DJANGO_CSRF_TRUSTED_ORIGINS`. Save/redeploy Render. Use the stable production URL for the client; a new preview hostname needs its own trusted-origin entry. If the Render hostname changes, update `BACKEND_URL` in Vercel and redeploy.
 
@@ -31,7 +37,7 @@ Copy the stable Vercel production origin into Render's `DJANGO_CSRF_TRUSTED_ORIG
 
 1. Open the Vercel URL in Safari or Chrome, including on mobile data.
 2. Confirm catalogue results and shelf map load.
-3. Sign in using the deployment staff credentials. Refresh and confirm the session persists.
+3. Sign in using the admin credentials. Refresh and confirm the session persists.
 4. Check out an available Book, return it, and verify wrong then correct shelves.
 5. Open a book QR and shelf QR on a second screen or print them; allow camera access and scan both on the phone. Check the manual-code fallback too.
 6. Confirm the overdue screen works, reminders explicitly say they are demo logs, and sign-out prevents staff actions.
