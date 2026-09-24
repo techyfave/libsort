@@ -4,15 +4,27 @@ The phone opens the Vercel HTTPS URL. Vercel forwards `/api/*` to Render. Sessio
 
 ## 1. Push the repository
 
-Commit application code, migrations, lockfiles, `render.yaml`, scripts and deployment docs to GitHub. Do not commit `.env`, SQLite, local credentials, generated static files or node_modules. Original PDF reference material is not required for deployment.
+Commit application code, migrations, lockfiles, scripts and deployment docs to GitHub. Do not commit `.env`, SQLite, local credentials, generated static files or node_modules. Original PDF reference material is not required for deployment.
 
 ## 2. Render backend
 
-In Render, create a **Blueprint** from the GitHub repository using root `render.yaml`. It defines a free Python web service and a free PostgreSQL database.
+Use the existing manually configured **Web Service** connected to this GitHub repository. Configure it with:
 
-Supply:
+- Runtime: `Python`
+- Build Command: `bash scripts/render-build.sh`
+- Start Command: `bash scripts/render-start.sh`
+- Health Check Path: `/api/health/`
+- Instance Type: `Free`
 
-- `DJANGO_CSRF_TRUSTED_ORIGINS`: the exact frontend HTTPS origin, e.g. `https://libsort-yourname.vercel.app`. You can initially leave the value blank until Vercel assigns the final URL, then update Render before logging in. Comma-separate additional known origins; never trust every Vercel tenant.
+Connect the service to the existing free PostgreSQL database and set its internal connection URL as `DATABASE_URL`.
+
+Set these Web Service environment variables:
+
+- `DJANGO_DEBUG`: `0`.
+- `DJANGO_SECRET_KEY`: a long random value generated and stored in Render.
+- `DATABASE_URL`: the existing Render PostgreSQL internal connection URL.
+- `DJANGO_CSRF_TRUSTED_ORIGINS`: `https://libsort.vercel.app`. Comma-separate any additional known origins; never trust every Vercel tenant.
+- `SEED_DEMO_DATA`: `1` for the initial demo-data deployment, then `0` if later deployments should leave edited records alone.
 - `DJANGO_SUPERUSER_USERNAME`: a new admin username, e.g. `libsort_admin`.
 - `DJANGO_SUPERUSER_EMAIL`: your email address.
 - `DJANGO_SUPERUSER_PASSWORD`: a new strong password entered privately in Render.
@@ -46,7 +58,7 @@ If login returns CSRF errors, check the exact Vercel origin on Render and confir
 
 ## Demo hosting limits
 
-Render's free web service sleeps after 15 minutes of inactivity and can take about a minute to wake. Open the app before the client meeting. Free PostgreSQL expires after 30 days and has no managed backups; upgrade or export before expiration if the demo must last longer. These are provider limits, not application timers. No paid resources are required by the checked-in Blueprint, but review provider billing and eligibility before creating resources.
+Render's free web service sleeps after 15 minutes of inactivity and can take about a minute to wake. Open the app before the client meeting. Free PostgreSQL expires after 30 days and has no managed backups; upgrade or export before expiration if the demo must last longer. These are provider limits, not application timers. The documented Web Service configuration does not require a paid Render instance.
 
 ## Verification and maintenance
 

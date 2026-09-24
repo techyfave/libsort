@@ -4,7 +4,7 @@ A library catalogue and staff workspace for finding books, recording loans, and 
 
 ## Deploy for a client demo
 
-Use the [Render + Vercel deployment guide](docs/deployment.md). The repository includes a Render Blueprint with PostgreSQL, Gunicorn startup and WhiteNoise, Vercel API proxy configuration, secure production settings, database-backed login protection, and GitHub deployment checks. Hosting account sign-in and the live service URLs are needed to finish deployment. The local demo password is not a deployment credential.
+Use the [Render + Vercel deployment guide](docs/deployment.md). The repository includes scripts for a manually configured Render Web Service, Gunicorn startup and WhiteNoise, Vercel API proxy configuration, secure production settings, database-backed login protection, and GitHub deployment checks. The local demo password is not a deployment credential.
 
 ## Run locally
 
