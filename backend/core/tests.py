@@ -186,14 +186,14 @@ class SeedTests(TestCase):
                     call_command('bootstrap_deployment')
         self.assertFalse(User.objects.exists())
 
-    def test_bootstrap_does_not_elevate_existing_staff(self):
+    def test_bootstrap_promotes_configured_existing_staff(self):
         user = User.objects.create_user('existing_staff', password='original-secret', is_staff=True)
-        with patch.dict('os.environ', {'DJANGO_SUPERUSER_USERNAME':user.username}, clear=True):
-            with self.assertRaises(CommandError):
-                call_command('bootstrap_deployment')
+        env = {'DJANGO_SUPERUSER_USERNAME':user.username, 'DJANGO_SUPERUSER_EMAIL':'admin@example.com', 'DJANGO_SUPERUSER_PASSWORD':'new-admin-secret-4vX8qP'}
+        with patch.dict('os.environ', env, clear=True):
+            call_command('bootstrap_deployment')
         user.refresh_from_db()
-        self.assertFalse(user.is_superuser)
-        self.assertTrue(user.check_password('original-secret'))
+        self.assertTrue(user.is_active and user.is_staff and user.is_superuser)
+        self.assertTrue(user.check_password(env['DJANGO_SUPERUSER_PASSWORD']))
 
     def test_seed_is_repeatable(self):
         call_command('seed_demo_data')

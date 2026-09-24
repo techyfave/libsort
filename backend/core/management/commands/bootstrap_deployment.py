@@ -21,11 +21,11 @@ class Command(BaseCommand):
         User = get_user_model()
         existing = User.objects.filter(username=username).first()
         if existing:
-            if not (existing.is_superuser and existing.is_staff and existing.is_active):
-                raise CommandError('That username already belongs to a non-active-admin account. Choose a new DJANGO_SUPERUSER_USERNAME; existing accounts are never elevated automatically.')
             if not password:
-                self.stdout.write('Admin account already exists; password and permissions unchanged.')
-                return
+                if existing.is_superuser and existing.is_staff and existing.is_active:
+                    self.stdout.write('Admin account already exists; password and permissions unchanged.')
+                    return
+                raise CommandError('Set DJANGO_SUPERUSER_PASSWORD to promote or recover the configured admin account.')
             try:
                 validate_password(password, existing)
                 if email:
@@ -35,9 +35,12 @@ class Command(BaseCommand):
             existing.set_password(password)
             if email:
                 existing.email = email
-            existing.save(update_fields=['password', 'email'])
+            existing.is_active = True
+            existing.is_staff = True
+            existing.is_superuser = True
+            existing.save(update_fields=['password', 'email', 'is_active', 'is_staff', 'is_superuser'])
             call_command('axes_reset_username', username, verbosity=0)
-            self.stdout.write('Existing admin credentials updated and sign-in lockout cleared. Remove DJANGO_SUPERUSER_PASSWORD after confirming login.')
+            self.stdout.write('Configured account promoted or recovered as admin and its sign-in lockout cleared. Remove DJANGO_SUPERUSER_PASSWORD after confirming login.')
             return
         if not password or not email:
             raise CommandError('Set DJANGO_SUPERUSER_EMAIL and DJANGO_SUPERUSER_PASSWORD to create the admin account.')
