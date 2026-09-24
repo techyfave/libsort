@@ -1,20 +1,13 @@
-import { type VercelConfig } from '@vercel/config/v1';
+import { routes, type VercelConfig } from '@vercel/config/v1';
 
-// Resolve the external origin at deployment time so the rewrite contains a real URL.
-const value = process.env.BACKEND_URL?.trim();
-if (!value) throw new Error('Set BACKEND_URL to the Render HTTPS origin before deploying.');
-const backend = new URL(value);
-if (backend.protocol !== 'https:' || backend.pathname !== '/' || backend.search || backend.hash || backend.username || backend.password) {
-  throw new Error('BACKEND_URL must be an HTTPS origin only, without /api, query parameters, or credentials.');
-}
-const backendOrigin = backend.origin;
+const backendOrigin = 'https://libsort.onrender.com';
 
 export const config: VercelConfig = {
   framework: 'vite',
   buildCommand: 'npm run build',
   outputDirectory: 'dist',
   rewrites: [
-    { source: '/api/:path*', destination: `${backendOrigin}/api/:path*` },
+    routes.rewrite('/api/(.*)', `${backendOrigin}/api/$1`),
   ],
   headers: [
     { source: '/(.*)', headers: [

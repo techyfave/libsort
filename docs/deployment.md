@@ -41,9 +41,9 @@ Confirm `https://libsort.onrender.com/api/health/` returns `{"status":"ok"}`.
 
 Import the same GitHub repository. Set **Root Directory** to `frontend`, Framework to **Vite**, and Node.js to **22.x**. Keep the repository's build/output configuration.
 
-Set the environment variable **`BACKEND_URL`** to the Render HTTPS origin, e.g. `https://libsort-api-xxxx.onrender.com`, with no `/api` suffix or trailing slash. Set it for Production (and Preview only if needed). `frontend/vercel.ts` reads it when deployment configuration is evaluated and creates the proxy rewrite. Deploy.
+The repository's `frontend/vercel.ts` forwards `/api/*` to `https://libsort.onrender.com`. No Vercel `BACKEND_URL` variable is required for this deployment. If the Render hostname changes, update `backendOrigin` in that file and redeploy.
 
-Copy the stable Vercel production origin into Render's `DJANGO_CSRF_TRUSTED_ORIGINS`. Save/redeploy Render. Use the stable production URL for the client; a new preview hostname needs its own trusted-origin entry. If the Render hostname changes, update `BACKEND_URL` in Vercel and redeploy.
+Keep the stable Vercel production origin in Render's `DJANGO_CSRF_TRUSTED_ORIGINS`. Save/redeploy Render. Use the stable production URL for the client; a new preview hostname needs its own trusted-origin entry.
 
 ## 4. Phone acceptance check
 
@@ -54,7 +54,7 @@ Copy the stable Vercel production origin into Render's `DJANGO_CSRF_TRUSTED_ORIG
 5. Open a book QR and shelf QR on a second screen or print them; allow camera access and scan both on the phone. Check the manual-code fallback too.
 6. Confirm the overdue screen works, reminders explicitly say they are demo logs, and sign-out prevents staff actions.
 
-If login returns CSRF errors, check the exact Vercel origin on Render and confirm `/api/session/` is reaching Django. If data does not load, check `BACKEND_URL`, `/api/health/`, and Render logs. Do not disable CSRF or add wildcard hostnames as a workaround.
+If login returns CSRF errors, check the exact Vercel origin on Render and confirm `/api/session/` is reaching Django. If data does not load, check `/api/health/` on both the Vercel and Render URLs and inspect the Render logs. Do not disable CSRF or add wildcard hostnames as a workaround.
 
 ## Demo hosting limits
 
