@@ -150,16 +150,25 @@ class LibraryFlowTests(TestCase):
 
 
 class SeedTests(TestCase):
-    def test_deployment_bootstrap_never_resets_existing_account(self):
+    def test_deployment_bootstrap_can_recover_existing_admin_credentials(self):
         env = {'DJANGO_SUPERUSER_USERNAME':'client_admin', 'DJANGO_SUPERUSER_EMAIL':'admin@example.com', 'DJANGO_SUPERUSER_PASSWORD':'random-admin-secret-7yJ9zK', 'SEED_DEMO_DATA':'0'}
         with patch.dict('os.environ', env, clear=True):
             call_command('bootstrap_deployment')
         user = User.objects.get(username='client_admin')
         self.assertTrue(user.is_staff and user.is_superuser and user.is_active)
-        with patch.dict('os.environ', {'DJANGO_SUPERUSER_USERNAME':'client_admin'}, clear=True):
+        recovery_env = {**env, 'DJANGO_SUPERUSER_PASSWORD':'new-random-admin-secret-4vX8qP'}
+        with patch.dict('os.environ', recovery_env, clear=True):
             call_command('bootstrap_deployment')
         user.refresh_from_db()
-        self.assertTrue(user.check_password(env['DJANGO_SUPERUSER_PASSWORD']))
+        self.assertTrue(user.check_password(recovery_env['DJANGO_SUPERUSER_PASSWORD']))
+        self.assertFalse(user.check_password(env['DJANGO_SUPERUSER_PASSWORD']))
+
+    def test_existing_admin_is_unchanged_without_password(self):
+        user = User.objects.create_superuser('client_admin', 'admin@example.com', 'original-admin-secret-7yJ9zK')
+        with patch.dict('os.environ', {'DJANGO_SUPERUSER_USERNAME':user.username}, clear=True):
+            call_command('bootstrap_deployment')
+        user.refresh_from_db()
+        self.assertTrue(user.check_password('original-admin-secret-7yJ9zK'))
 
     def test_bootstrap_without_configuration_is_optional(self):
         with patch.dict('os.environ', {}, clear=True):

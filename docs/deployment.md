@@ -29,7 +29,7 @@ Set these Web Service environment variables:
 - `DJANGO_SUPERUSER_EMAIL`: your email address.
 - `DJANGO_SUPERUSER_PASSWORD`: a new strong password entered privately in Render.
 
-Keep the Start Command as `bash scripts/render-start.sh`. It runs migrations and `python backend/manage.py bootstrap_deployment` before starting Gunicorn, so no paid shell or pre-deploy command is needed. The bootstrap creates an active superuser once; later starts never reset its password. Existing non-admin usernames are rejected rather than silently promoted. Remove the old `DEMO_STAFF_USERNAME` and `DEMO_STAFF_PASSWORD` environment variables; they are no longer used.
+Keep the Start Command as `bash scripts/render-start.sh`. It runs migrations and `python backend/manage.py bootstrap_deployment` before starting Gunicorn, so no paid shell or pre-deploy command is needed. The bootstrap creates an active superuser. If that superuser already exists and `DJANGO_SUPERUSER_PASSWORD` is supplied, startup applies the supplied credentials and clears that username's failed-login lockout. Existing non-admin usernames are rejected rather than silently promoted. Remove the old `DEMO_STAFF_USERNAME` and `DEMO_STAFF_PASSWORD` environment variables; they are no longer used.
 
 After a successful deploy, sign in at `https://libsort.onrender.com/admin/` using the new admin. You can also use that account in the frontend Staff sign in. In admin, use Users to create staff, enable their Staff status, and grant only the model permissions they need. Existing staff accounts remain intact and can be managed there.
 

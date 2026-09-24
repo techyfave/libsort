@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
 class Command(BaseCommand):
-    help = 'Optionally seed the demo and create a superuser once from environment secrets.'
+    help = 'Optionally seed the demo and create or recover a deployment superuser from environment secrets.'
 
     def handle(self, *args, **options):
         if os.environ.get('SEED_DEMO_DATA') == '1':
@@ -23,7 +23,21 @@ class Command(BaseCommand):
         if existing:
             if not (existing.is_superuser and existing.is_staff and existing.is_active):
                 raise CommandError('That username already belongs to a non-active-admin account. Choose a new DJANGO_SUPERUSER_USERNAME; existing accounts are never elevated automatically.')
-            self.stdout.write('Admin account already exists; password and permissions unchanged.')
+            if not password:
+                self.stdout.write('Admin account already exists; password and permissions unchanged.')
+                return
+            try:
+                validate_password(password, existing)
+                if email:
+                    validate_email(email)
+            except ValidationError as exc:
+                raise CommandError('Admin email or password does not meet validation requirements.') from exc
+            existing.set_password(password)
+            if email:
+                existing.email = email
+            existing.save(update_fields=['password', 'email'])
+            call_command('axes_reset_username', username, verbosity=0)
+            self.stdout.write('Existing admin credentials updated and sign-in lockout cleared. Remove DJANGO_SUPERUSER_PASSWORD after confirming login.')
             return
         if not password or not email:
             raise CommandError('Set DJANGO_SUPERUSER_EMAIL and DJANGO_SUPERUSER_PASSWORD to create the admin account.')
@@ -33,4 +47,5 @@ class Command(BaseCommand):
         except ValidationError as exc:
             raise CommandError('Admin email or password does not meet validation requirements.') from exc
         User.objects.create_superuser(username=username, email=email, password=password)
+        call_command('axes_reset_username', username, verbosity=0)
         self.stdout.write('Admin account created. Remove DJANGO_SUPERUSER_PASSWORD from the service environment after successful deployment.')
