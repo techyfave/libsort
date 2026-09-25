@@ -1,7 +1,9 @@
 import uuid
 from io import BytesIO
+from urllib.parse import parse_qs, urlencode, urlparse
 import qrcode
 import qrcode.image.svg
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.db import transaction, IntegrityError
 from django.db.models import Q, Count
@@ -140,6 +142,9 @@ def return_book(request, pk):
     return Response({'detail': 'Return recorded. Verify the shelf to make this book available.', 'book': BookSerializer(BOOKS.get(pk=book.pk)).data})
 
 def resolve_code(model, value, prefix, fallback):
+    parsed = urlparse(value)
+    if parsed.scheme in ['http', 'https']:
+        value = parse_qs(parsed.query).get(prefix.lower(), [value])[0]
     if value.startswith(prefix + ':'):
         try:
             return get_object_or_404(model, scan_id=uuid.UUID(value.split(':', 1)[1]))
@@ -176,5 +181,7 @@ def label(request, kind, pk):
         raise ValidationError('Unknown label type.')
     obj = get_object_or_404(Book if kind == 'book' else Shelf, pk=pk)
     output = BytesIO()
-    qrcode.make(f'{kind.upper()}:{obj.scan_id}', image_factory=qrcode.image.svg.SvgPathImage).save(output)
+    code = f'{kind.upper()}:{obj.scan_id}'
+    destination = f'{settings.PUBLIC_APP_URL}/?{urlencode({kind: code})}'
+    qrcode.make(destination, image_factory=qrcode.image.svg.SvgPathImage).save(output)
     return HttpResponse(output.getvalue(), content_type='image/svg+xml')

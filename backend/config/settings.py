@@ -10,6 +10,7 @@ if not DEBUG and SECRET_KEY == 'local-development-only-change-before-deployment'
 if not DEBUG and len(SECRET_KEY) < 50:
     raise RuntimeError('DJANGO_SECRET_KEY must contain at least 50 characters.')
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',')
+PUBLIC_APP_URL = os.environ.get('PUBLIC_APP_URL', 'https://libsort.vercel.app' if not DEBUG else 'http://localhost:5173').rstrip('/')
 if os.environ.get('RENDER_EXTERNAL_HOSTNAME'):
     ALLOWED_HOSTS.append(os.environ['RENDER_EXTERNAL_HOSTNAME'])
 INSTALLED_APPS = ['django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles', 'rest_framework', 'core']

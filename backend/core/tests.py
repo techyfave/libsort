@@ -87,6 +87,13 @@ class LibraryFlowTests(TestCase):
         self.assertEqual(self.verify().data['expected_shelf'], 'RENAMED-01')
         self.assertEqual(self.client.get(f'/api/labels/book/{self.book.id}/').content, original)
 
+    def test_https_qr_destinations_work_in_scan_verification(self):
+        book_url = f'https://libsort.vercel.app/?book=BOOK%3A{self.book.scan_id}'
+        shelf_url = f'https://libsort.vercel.app/?shelf=SHELF%3A{self.shelf.scan_id}'
+        response = self.client.post('/api/scan-verify/', {'book_code':book_url, 'shelf_code':shelf_url}, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['result'], 'correct')
+
     def test_invalid_inputs(self):
         self.assertEqual(self.client.post('/api/checkout/', {}, format='json').status_code, 400)
         self.assertEqual(self.client.get('/api/books/?shelf_id=invalid').status_code, 400)
