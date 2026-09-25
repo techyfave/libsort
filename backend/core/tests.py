@@ -175,6 +175,17 @@ class SeedTests(TestCase):
             call_command('bootstrap_deployment')
         self.assertFalse(User.objects.exists())
 
+    def test_bootstrap_normalizes_dashboard_quotes_and_spaces(self):
+        env = {
+            'DJANGO_SUPERUSER_USERNAME':'  "quoted_admin"  ',
+            'DJANGO_SUPERUSER_EMAIL':" 'admin@example.com' ",
+            'DJANGO_SUPERUSER_PASSWORD':'  "quoted-admin-secret-4vX8qP"  ',
+        }
+        with patch.dict('os.environ', env, clear=True):
+            call_command('bootstrap_deployment')
+        user = User.objects.get(username='quoted_admin')
+        self.assertTrue(user.check_password('quoted-admin-secret-4vX8qP'))
+
     def test_bootstrap_rejects_incomplete_or_weak_credentials(self):
         for env in [
             {'DJANGO_SUPERUSER_PASSWORD':'secret'},

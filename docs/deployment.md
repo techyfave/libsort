@@ -33,6 +33,8 @@ Keep the Start Command as `bash scripts/render-start.sh`. It runs migrations and
 
 After a successful deploy, sign in at `https://libsort.onrender.com/admin/` using the new admin. You can also use that account in the frontend Staff sign in. In admin, use Users to create staff, enable their Staff status, and grant only the model permissions they need. Existing staff accounts remain intact and can be managed there.
 
+Startup trims accidental surrounding spaces and matching shell quotes from the three admin values, verifies the saved password hash, and logs the normalized username and password length without printing the password. Use that line to confirm what must be typed at sign-in.
+
 Remove `DJANGO_SUPERUSER_PASSWORD` after confirming login (or remove all three bootstrap variables). Set `SEED_DEMO_DATA=0` after the initial deployment if you want to manage records without seeding. Render generates `DJANGO_SECRET_KEY` and supplies `DATABASE_URL`; its hostname is automatically allowed. Build collects admin static files.
 
 Confirm `https://libsort.onrender.com/api/health/` returns `{"status":"ok"}`.
