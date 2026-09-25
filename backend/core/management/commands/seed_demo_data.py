@@ -9,6 +9,26 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        authors = {
+            'Introduction to Sociology': 'Amara Okafor',
+            'Principles of Economics': 'Musa Bello',
+            'Understanding Society': 'Tola Adeyemi',
+            'Public Administration': 'Chidi Nwosu',
+            'Research Methods': 'Zainab Lawal',
+            'Political Thought': 'Kunle Adebayo',
+            'Foundations of Design': 'Ifeoma Eze',
+            'African Art and Culture': 'Binta Sule',
+            'Literature and Society': 'Lara Balogun',
+            'History of Architecture': 'Emeka Obi',
+            'Creative Writing': 'Sade Williams',
+            'Visual Communication': 'Nneka Udo',
+            'Database System Concepts': 'David Mensah',
+            'Data Structures': 'Amina Yusuf',
+            'Foundations of Nursing': 'Grace Ekanem',
+            'Applied Mathematics': 'Samuel Okoro',
+            'Computer Networks': 'Femi Ajayi',
+            'Introduction to Biology': 'Maryam Danjuma',
+        }
         catalogue = [
             ('Ground Floor', 'Social Sciences', 'GF-SS', 9, ['Introduction to Sociology', 'Principles of Economics', 'Understanding Society', 'Public Administration', 'Research Methods', 'Political Thought']),
             ('First Floor', 'Art', 'FF-ART', 10, ['Foundations of Design', 'African Art and Culture', 'Literature and Society', 'History of Architecture', 'Creative Writing', 'Visual Communication']),
@@ -20,7 +40,8 @@ class Command(BaseCommand):
             section, _ = Section.objects.get_or_create(floor=floor, name=section_name)
             shelves = [Shelf.objects.get_or_create(code=f'{prefix}-{n:02}', defaults={'section': section, 'directions': f'Shelf {n:02} in the {section_name} section.'})[0] for n in range(1, count + 1)]
             for n in range(36):
-                book, created = Book.objects.get_or_create(accession=f'LS-{order * 36 + n + 1:04}', defaults={'title': titles[n % len(titles)], 'author': ['A. Okafor', 'M. Bello', 'T. Adeyemi'][n % 3] + ' (demo)', 'category': section_name, 'shelf': shelves[n % count]})
+                title = titles[n % len(titles)]
+                book, created = Book.objects.get_or_create(accession=f'LS-{order * 36 + n + 1:04}', defaults={'title': title, 'author': authors[title], 'category': section_name, 'shelf': shelves[n % count]})
                 if created: books.append(book)
         students = [Student.objects.get_or_create(student_id=f'DEMO-{n:03}', defaults={'name': name, 'contact': f'student{n}@example.com'})[0] for n, name in enumerate(['Ada Okafor', 'Tunde Bello', 'Grace Eze', 'Musa Ibrahim', 'Joy Adeyemi'], 1)]
         today = timezone.localdate()
