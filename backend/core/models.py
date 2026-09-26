@@ -62,9 +62,17 @@ class Book(models.Model):
 
 
 class Student(models.Model):
-    student_id = models.CharField(max_length=40, unique=True)
+    student_id = models.CharField(max_length=40, unique=True, blank=True)
     name = models.CharField(max_length=150)
-    contact = models.EmailField(blank=True)
+    contact = models.EmailField(blank=True)  # Acts as the primary email
+    phone = models.CharField(max_length=20, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.student_id:
+            from django.utils.crypto import get_random_string
+            # Generate an 8-character uppercase alphanumeric ID
+            self.student_id = get_random_string(8, allowed_chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f'{self.student_id} — {self.name}'

@@ -171,9 +171,19 @@ def verify(request):
 
 @api_view(['POST'])
 def remind(request, pk):
-    loan = get_object_or_404(BorrowRecord, pk=pk, returned_at__isnull=True, due_date__lt=timezone.localdate())
+    loan = get_object_or_404(BorrowRecord, pk=pk, returned_at__isnull=True)
     Reminder.objects.create(loan=loan, staff=request.user)
-    return Response({'detail': 'Demo reminder logged. No email or SMS was sent.', 'delivery': 'demo_logged'}, status=201)
+    
+    from django.core.mail import send_mail
+    subject = f"Library Reminder: {loan.book.title}"
+    message = f"Hello {loan.student.name},\n\nThis is a reminder that the book '{loan.book.title}' is due on {loan.due_date}.\nPlease ensure it is returned on time.\n\nThank you!"
+    if loan.student.contact:
+        try:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [loan.student.contact])
+            return Response({'detail': 'Email reminder sent.', 'delivery': 'email_sent'}, status=201)
+        except Exception as e:
+            return Response({'detail': f'Error sending email: {str(e)}', 'delivery': 'email_error'}, status=500)
+    return Response({'detail': 'Reminder logged, but student has no email.', 'delivery': 'demo_logged'}, status=201)
 
 @api_view(['GET'])
 def label(request, kind, pk):

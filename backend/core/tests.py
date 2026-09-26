@@ -66,7 +66,7 @@ class LibraryFlowTests(TestCase):
         loan.save()
         self.assertEqual(loan.status, 'borrowed')
         self.assertEqual(len(self.client.get('/api/loans/?overdue=1').data), 0)
-        self.assertEqual(self.client.post(f'/api/loans/{loan.id}/remind/').status_code, 404)
+        self.assertEqual(self.client.post(f'/api/loans/{loan.id}/remind/').status_code, 201)
 
     def test_public_catalogue_but_private_lending_records(self):
         self.client.force_authenticate(None)
