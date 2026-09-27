@@ -54,7 +54,7 @@ Keep the stable Vercel production origin in Render's `DJANGO_CSRF_TRUSTED_ORIGIN
 3. Sign in using the admin credentials. Refresh and confirm the session persists.
 4. Check out an available Book, return it, and verify wrong then correct shelves.
 5. Open a book QR and shelf QR on a second screen or print them; allow camera access and scan both on the phone. Check the manual-code fallback too.
-6. Confirm the overdue screen works, reminders explicitly say they are demo logs, and sign-out prevents staff actions.
+6. Confirm the overdue screen works, reminders queue successfully and arrive through Resend, and sign-out prevents staff actions.
 
 If login returns CSRF errors, check the exact Vercel origin on Render and confirm `/api/session/` is reaching Django. If data does not load, check `/api/health/` on both the Vercel and Render URLs and inspect the Render logs. Do not disable CSRF or add wildcard hostnames as a workaround.
 
@@ -69,3 +69,7 @@ Run `python backend/manage.py test core` and `npm run build` in `frontend` befor
 Migrations run during startup to support Render's free service (which has no pre-deploy command/shell). This is suitable for a single demo service; adopt a separate migration phase for multi-instance production. PostgreSQL concurrency and physical-camera behavior still need confirmation on the deployed services. Track client feedback separately from the demo dataset.
 
 References: [Render Django deployment](https://render.com/docs/deploy-django), [Render free-tier limits](https://render.com/docs/free), [Vercel external rewrites](https://vercel.com/docs/routing/rewrites), [Vercel TypeScript configuration](https://vercel.com/docs/project-configuration/vercel-ts).
+
+## Resend email reminders
+
+Follow [email setup](email_setup.md) to verify your custom sending domain. Set `RESEND_API_KEY`, `DEFAULT_FROM_EMAIL`, and `CELERY_BROKER_URL` on the backend and Celery worker. Run a separate worker with `celery --workdir backend -A config worker --loglevel=info`. Both services need the same database and Redis broker. Restart both after changing credentials. The web service alone does not process queued email.

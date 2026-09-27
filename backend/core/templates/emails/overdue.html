@@ -1,0 +1,50 @@
+{% extends "emails/base.html" %}
+
+{% block message %}
+<h2>🚨 URGENT: Book Overdue Notice</h2>
+
+<p>Dear <strong>{{ student_name }}</strong>,</p>
+
+<div class="info-section" style="background-color: #ffe6e6; border-color: #ffb3b3;">
+    <p style="color: #d9534f; font-weight: bold; margin: 0 0 10px 0;">⚠️ ACTION REQUIRED</p>
+    <p style="margin: 0;">Your borrowed book is now <strong>{{ days_overdue }} day{{ days_overdue|pluralize }} overdue</strong>. 
+    Please return it immediately to avoid additional late fees.</p>
+</div>
+
+<div class="book-info">
+    <strong>Book Details</strong>
+    <p><strong>Title:</strong> {{ book_title }}</p>
+    <p><strong>Author:</strong> {{ book_author }}</p>
+    <p><strong>Accession Number:</strong> {{ book_accession }}</p>
+</div>
+
+<div class="info-section">
+    <p><strong>Overdue Information:</strong></p>
+    <p>
+        <strong>Original Due Date:</strong> {{ due_date }}<br>
+        <strong>Days Overdue:</strong> <span class="highlight">{{ days_overdue }} days</span>
+    </p>
+</div>
+
+<p><strong>What You Need to Do:</strong></p>
+<ol style="color: #333; font-size: 14px; margin: 10px 0;">
+    <li><strong>Return the book immediately</strong> to the library</li>
+    <li>Late fees may have been incurred. Check with library staff for your account balance</li>
+    <li>If you have lost the book, report it to the library immediately</li>
+</ol>
+
+<p>If there are extenuating circumstances preventing you from returning the book, 
+please contact the library staff as soon as possible to discuss options.</p>
+
+<p style="color: #d9534f; font-weight: bold;">
+    Please take action TODAY to resolve this matter.
+</p>
+
+<div class="divider"></div>
+
+<p style="font-size: 13px; color: #999;">
+    <em>This is an urgent notice from the LibSort Library Management System. 
+    If you have already returned this book, please disregard this message and contact the library to update your account.</em>
+</p>
+
+{% endblock %}

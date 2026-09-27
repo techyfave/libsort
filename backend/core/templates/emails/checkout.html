@@ -1,0 +1,44 @@
+{% extends "emails/base.html" %}
+
+{% block message %}
+<h2>✅ Book Checkout Confirmation</h2>
+
+<p>Dear <strong>{{ student_name }}</strong>,</p>
+
+<p>Thank you for borrowing from our library! Your book checkout has been confirmed. Here are the details of your loan:</p>
+
+<div class="book-info">
+    <strong>Book Details</strong>
+    <p><strong>Title:</strong> {{ book_title }}</p>
+    <p><strong>Author:</strong> {{ book_author }}</p>
+    <p><strong>Accession Number:</strong> {{ book_accession }}</p>
+</div>
+
+<div class="info-section">
+    <p><strong>Loan Terms:</strong></p>
+    <p>
+        <strong>Checkout Date:</strong> {{ borrowed_date }}<br>
+        <strong>Due Date:</strong> <span class="highlight">{{ due_date }}</span><br>
+        <strong>Loan Period:</strong> {{ days_borrowed }} days
+    </p>
+</div>
+
+<p><strong>Important Reminders:</strong></p>
+<ul style="color: #333; font-size: 14px; margin: 10px 0;">
+    <li>Please return the book by the due date to avoid late fees</li>
+    <li>Handle the book with care to maintain its condition</li>
+    <li>If you need to extend the loan, contact the library staff</li>
+    <li>If the book is lost or damaged, report it immediately</li>
+</ul>
+
+<p>
+    <strong>Thank you for using LibSort Library System!</strong>
+</p>
+
+<div class="divider"></div>
+
+<p style="font-size: 13px; color: #999;">
+    <em>Questions? Please visit the library or contact the staff during business hours.</em>
+</p>
+
+{% endblock %}

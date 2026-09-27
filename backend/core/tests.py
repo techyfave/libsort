@@ -6,8 +6,9 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 from .models import Floor, Section, Shelf, Book, Student, BorrowRecord, ShelvingLog, Reminder
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from django.test import override_settings
+from .tasks import send_reminder_email, send_checkout_email, send_overdue_email
 
 
 class LibraryFlowTests(TestCase):
@@ -203,6 +204,84 @@ class SeedTests(TestCase):
                 with self.assertRaises(CommandError):
                     call_command('bootstrap_deployment')
         self.assertFalse(User.objects.exists())
+
+
+class EmailTaskTests(TestCase):
+    """Test cases for email notification tasks."""
+
+    def setUp(self):
+        """Create test data for email tests."""
+        floor = Floor.objects.create(name='Ground Floor')
+        section = Section.objects.create(name='Social Sciences', floor=floor)
+        self.shelf = Shelf.objects.create(code='GF-SS-01', section=section)
+        self.book = Book.objects.create(
+            accession='LS-0001',
+            title='Test Book',
+            author='Test Author',
+            category='Test',
+            shelf=self.shelf
+        )
+        self.student_with_email = Student.objects.create(
+            student_id='S001',
+            name='Student With Email',
+            contact='student@example.com'
+        )
+        self.student_no_email = Student.objects.create(
+            student_id='S002',
+            name='Student No Email'
+        )
+        self.today = timezone.localdate()
+
+    def test_send_reminder_email_with_valid_contact(self):
+        """Test reminder email is sent when student has contact email."""
+        loan = BorrowRecord.objects.create(
+            book=self.book,
+            student=self.student_with_email,
+            borrowed_date=self.today,
+            due_date=self.today + timedelta(days=1)
+        )
+
+        with patch('core.tasks.send_html_email') as mock_send:
+            mock_send.return_value = 1
+            result = send_reminder_email(loan.id)
+
+        mock_send.assert_called_once()
+        self.assertIn('sent to', result)
+
+    def test_send_reminder_email_without_contact(self):
+        """Test reminder email task handles missing contact gracefully."""
+        loan = BorrowRecord.objects.create(
+            book=self.book,
+            student=self.student_no_email,
+            borrowed_date=self.today,
+            due_date=self.today + timedelta(days=1)
+        )
+
+        with patch('core.tasks.send_html_email') as mock_send:
+            result = send_reminder_email(loan.id)
+
+        mock_send.assert_not_called()
+        self.assertIn('no email', result)
+
+    def test_send_reminder_email_overdue_status(self):
+        """Test reminder email correctly identifies overdue books."""
+        # Create an overdue loan
+        loan = BorrowRecord.objects.create(
+            book=self.book,
+            student=self.student_with_email,
+            borrowed_date=self.today - timedelta(days=10),
+            due_date=self.today - timedelta(days=3)
+        )
+
+        with patch('core.tasks.send_html_email') as mock_send:
+            mock_send.return_value = 1
+            result = send_reminder_email(loan.id)
+
+        # Check that the context passed includes overdue information
+        call_args = mock_send.call_args
+        context = call_args[1]['context']
+        self.assertTrue(context['is_overdue'])
+        self.assertGreater(context['days_overdue'], 0)
 
     def test_bootstrap_promotes_configured_existing_staff(self):
         user = User.objects.create_user('existing_staff', password='original-secret', is_staff=True)

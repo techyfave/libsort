@@ -1,0 +1,45 @@
+{% extends "emails/base.html" %}
+
+{% block message %}
+<h2>📖 Book Reminder Notice</h2>
+
+<p>Dear <strong>{{ student_name }}</strong>,</p>
+
+{% if is_overdue %}
+<div class="info-section" style="background-color: #ffe6e6; border-color: #ffb3b3;">
+    <p><strong style="color: #d9534f;">⚠️ URGENT: This book is OVERDUE</strong></p>
+    <p>The due date has passed by <strong>{{ days_overdue }} day{{ days_overdue|pluralize }}</strong>. Please return this book immediately to avoid late fees.</p>
+</div>
+{% else %}
+<p>This is a reminder that you have an upcoming book due soon. Please return it by the due date to avoid any penalties.</p>
+{% endif %}
+
+<div class="book-info">
+    <strong>Book Details</strong>
+    <p><strong>Title:</strong> {{ book_title }}</p>
+    <p><strong>Author:</strong> {{ book_author }}</p>
+    <p><strong>Accession Number:</strong> {{ book_accession }}</p>
+</div>
+
+<div class="info-section">
+    <p><strong>Loan Information:</strong></p>
+    <p>
+        <strong>Borrowed Date:</strong> {{ borrowed_date }}<br>
+        <strong>Due Date:</strong> <span class="highlight">{{ due_date }}</span>
+    </p>
+</div>
+
+<p>Please return this book at your earliest convenience. If you need an extension or have any questions, please contact the library staff.</p>
+
+<p>
+    <strong>Thank you for using LibSort Library System!</strong>
+</p>
+
+<div class="divider"></div>
+
+<p style="font-size: 13px; color: #999;">
+    <em>This is an automated reminder email from the LibSort Library Management System. 
+    If you have already returned this book, please ignore this message.</em>
+</p>
+
+{% endblock %}

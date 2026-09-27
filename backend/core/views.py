@@ -19,6 +19,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from .models import Floor, Shelf, Book, Student, BorrowRecord, ShelvingLog, Reminder
 from .serializers import BookSerializer, StudentSerializer, LoanSerializer, CheckoutSerializer, ScanSerializer
+from .tasks import send_reminder_email
 
 BOOKS = Book.objects.select_related('shelf__section__floor')
 LOANS = BorrowRecord.objects.select_related('book__shelf__section__floor', 'student')
@@ -174,15 +175,12 @@ def remind(request, pk):
     loan = get_object_or_404(BorrowRecord, pk=pk, returned_at__isnull=True)
     Reminder.objects.create(loan=loan, staff=request.user)
     
-    from django.core.mail import send_mail
-    subject = f"Library Reminder: {loan.book.title}"
-    message = f"Hello {loan.student.name},\n\nThis is a reminder that the book '{loan.book.title}' is due on {loan.due_date}.\nPlease ensure it is returned on time.\n\nThank you!"
+
+
     if loan.student.contact:
-        try:
-            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [loan.student.contact])
-            return Response({'detail': 'Email reminder sent.', 'delivery': 'email_sent'}, status=201)
-        except Exception as e:
-            return Response({'detail': f'Error sending email: {str(e)}', 'delivery': 'email_error'}, status=500)
+        # Queue email task asynchronously using Celery
+        send_reminder_email.delay(loan.id)
+        return Response({'detail': 'Email reminder queued.', 'delivery': 'email_queued'}, status=201)
     return Response({'detail': 'Reminder logged, but student has no email.', 'delivery': 'demo_logged'}, status=201)
 
 @api_view(['GET'])

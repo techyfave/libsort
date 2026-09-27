@@ -3,6 +3,15 @@ import dj_database_url
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+env_file = BASE_DIR.parent / '.env'
+if env_file.exists():
+    with open(env_file) as f:
+        for line in f:
+            line = line.strip()
+            if '=' in line and not line.startswith('#'):
+                k, v = line.split('=', 1)
+                os.environ.setdefault(k, v.strip(' "\''))
+
 DEBUG = os.environ.get('DJANGO_DEBUG', '0' if os.environ.get('RENDER') else '1') == '1'
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'local-development-only-change-before-deployment')
 if not DEBUG and SECRET_KEY == 'local-development-only-change-before-deployment':
@@ -14,15 +23,15 @@ PUBLIC_APP_URL = os.environ.get('PUBLIC_APP_URL', 'https://libsort.vercel.app' i
 if os.environ.get('RENDER_EXTERNAL_HOSTNAME'):
     ALLOWED_HOSTS.append(os.environ['RENDER_EXTERNAL_HOSTNAME'])
 INSTALLED_APPS = ['django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles', 'rest_framework', 'core']
-INSTALLED_APPS += ['axes']
+INSTALLED_APPS += ['axes', 'django_celery_beat']
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware', 
-    'django.contrib.sessions.middleware.SessionMiddleware', 
-    'django.middleware.common.CommonMiddleware', 
-    'django.middleware.csrf.CsrfViewMiddleware', 
-    'django.contrib.auth.middleware.AuthenticationMiddleware', 
-    'django.contrib.messages.middleware.MessageMiddleware', 
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     ]
 
@@ -62,7 +71,7 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 STORAGES = {
-    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'}, 
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
     'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'}
     }
 
@@ -83,12 +92,21 @@ if not DEBUG:
     SECURE_REDIRECT_EXEMPT = [r'^api/health/$']
 LOGGING = {'version': 1, 'disable_existing_loggers': False, 'handlers': {'console': {'class': 'logging.StreamHandler'}}, 'root': {'handlers': ['console'], 'level': 'INFO'}}
 
-# Resend Email Configuration
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.resend.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'resend'
-EMAIL_HOST_PASSWORD = os.environ.get('RESEND_API_KEY', '')
-DEFAULT_FROM_EMAIL = 'notifications@yourdomain.com'
+# Resend HTTPS email delivery. The sender domain must be verified in Resend.
+EMAIL_BACKEND = 'core.email_backend.ResendEmailBackend'
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '')
+EMAIL_TIMEOUT = 30
+# Celery Configuration
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', CELERY_BROKER_URL)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Africa/Lagos'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes
 
+# Email templates directory
+TEMPLATES[0]['DIRS'] = [BASE_DIR / 'core' / 'templates']

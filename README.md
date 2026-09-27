@@ -8,7 +8,9 @@ Use the [Render + Vercel deployment guide](docs/deployment.md). The repository i
 
 ## Run locally
 
-Requires Python 3.11+ and Node.js 22. Django serves the API on port 8000; Vite serves the interface on port 5173 and proxies API/admin requests to Django.
+Requires Python 3.11+ and Node.js 22. Django serves the API on port 8000; Vite serves the interface on port 5173 and proxies API/admin requests to Django. Celery handles asynchronous email notifications with Redis.
+
+### Setup
 
 ```powershell
 python -m venv .venv
@@ -16,18 +18,44 @@ python -m venv .venv
 .venv\Scripts\python backend/manage.py migrate
 .venv\Scripts\python backend/manage.py seed_demo_data
 .venv\Scripts\python backend/manage.py createsuperuser
+```
+
+### Environment variables for email
+
+Create or update the `.env` file in the project root:
+
+```
+RESEND_API_KEY=re_your_api_key
+DEFAULT_FROM_EMAIL=LibSort Library <reminders@yourdomain.com>
+CELERY_BROKER_URL=redis://localhost:6379/0
+```
+
+Verify your sending domain in Resend and create a sending API key. See [email setup](docs/email_setup.md) for DNS verification and deployment instructions. Keep the key on the backend and worker only.
+
+### Run the services
+
+**Terminal 1 - Django API:**
+```powershell
 .venv\Scripts\python backend/manage.py runserver 127.0.0.1:8000
 ```
 
-In a second terminal:
+**Terminal 2 - Celery Worker (for background email tasks):**
+```powershell
+.venv\Scripts\celery --workdir backend -A config worker --loglevel=info --pool=solo
+```
 
+**Terminal 3 - Frontend:**
 ```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:5173. Search and the shelf map are public. Use the superuser account for Staff sign in. Manage books, students, floors, sections and shelves at http://127.0.0.1:8000/admin/. There is no default password. Deployment can create your admin once using the `DJANGO_SUPERUSER_*` environment variables; see docs/deployment.md. If Python's `ensurepip` is unavailable, create the virtual environment and install with `uv pip install --python .venv/Scripts/python.exe -r requirements.lock.txt`. `requirements.txt` declares supported ranges; `requirements.lock.txt` records the tested installation.
+Open http://127.0.0.1:5173. Search and the shelf map are public. Use the superuser account for Staff sign in. Manage books, students, floors, sections and shelves at http://127.0.0.1:8000/admin/. Email reminders are sent asynchronously when staff click "Remind" buttons in the Circulation tab.
+
+**Note:** Start Redis before Django and Celery. The API and worker must use the same broker; an in-memory broker cannot pass tasks between these processes.
+
+If Python's `ensurepip` is unavailable, create the virtual environment and install with `uv pip install --python .venv/Scripts/python.exe -r requirements.lock.txt`. `requirements.txt` declares supported ranges; `requirements.lock.txt` records the tested installation.
 
 ## Working flow
 
@@ -41,13 +69,13 @@ QR payloads are `BOOK:<uuid>` and `SHELF:<uuid>`. They identify records rather t
 
 Loans have a database constraint allowing only one active loan per Book. Checkout and return use transactions; a row lock protects book changes on PostgreSQL. SQLite is for a single-user development/demo environment; concurrent write load should be evaluated on PostgreSQL before deployment. Admin makes loan and audit records read-only to keep mutations in the lending workflow. Deleting referenced locations is protected.
 
-Overdue means an unreturned loan with a due date before today's date in Africa/Lagos. It is computed when read and cannot go stale waiting for a scheduler. Due-today loans are not overdue. Demo reminder buttons create an audit record; **they do not send email or SMS**.
+Overdue means an unreturned loan with a due date before today's date in Africa/Lagos. It is computed when read and cannot go stale waiting for a scheduler. Due-today loans are not overdue. Reminder buttons create an audit record and queue an email notification via Resend HTTPS API through Celery.
 
 ## Data and scope
 
 `seed_demo_data` creates 3 floors, 3 sections, 36 shelves, 108 book units, five students and illustrative loan/return states. Catalogue titles and authors are synthetic demonstration metadata, not claims about published editions; ISBNs are intentionally blank. Repeated titles demonstrate multiple independently lendable Books. Seed reruns preserve existing records rather than resetting them. The supplied nursing PDFs remain reference material and are not automatically imported.
 
-The shelf map is a hierarchical floor/section/shelf browser, not a measured building plan. No RFID, sensors, external classification lookup, email delivery or floorplan navigation is included. Public catalogue results are capped at 200 for this first demo; pagination is needed before growing beyond that. Google Fonts are optional; system fonts remain usable offline.
+The shelf map is a hierarchical floor/section/shelf browser, not a measured building plan. No RFID, sensors, external classification lookup or floorplan navigation is included. Email delivery to students is implemented via Resend HTTPS API and Celery asynchronous tasks. Public catalogue results are capped at 200 for this first demo; pagination is needed before growing beyond that. Google Fonts are optional; system fonts remain usable offline.
 
 ## Verify
 
