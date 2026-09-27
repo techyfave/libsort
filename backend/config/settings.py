@@ -96,10 +96,16 @@ LOGGING = {'version': 1, 'disable_existing_loggers': False, 'handlers': {'consol
 EMAIL_BACKEND = 'core.email_backend.ResendEmailBackend'
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '')
-EMAIL_TIMEOUT = 30
+EMAIL_TIMEOUT = 10
+# Direct delivery works on a single web service; Celery requires Redis + a worker.
+EMAIL_DELIVERY_MODE = os.environ.get('EMAIL_DELIVERY_MODE', 'direct')
+if EMAIL_DELIVERY_MODE not in {'direct', 'celery'}:
+    raise RuntimeError('EMAIL_DELIVERY_MODE must be direct or celery.')
 # Celery Configuration
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', CELERY_BROKER_URL)
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_TASK_PUBLISH_RETRY = False
+CELERY_BROKER_TRANSPORT_OPTIONS = {'socket_connect_timeout': 5, 'socket_timeout': 5}
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'

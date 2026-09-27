@@ -1,6 +1,6 @@
 # Resend email notifications
 
-LibSort sends HTML reminders, checkout confirmations and overdue notices through the Resend HTTPS API, with Celery handling background delivery and retries.
+LibSort sends HTML reminders, checkout confirmations and overdue notices through the Resend HTTPS API, with direct delivery by default. Redis and a Celery worker are optional.
 
 ## Domain and credentials
 
@@ -9,19 +9,19 @@ LibSort sends HTML reminders, checkout confirmations and overdue notices through
 3. Create a sending API key scoped to the domain at https://resend.com/api-keys.
 4. Choose a sender on that domain, such as `LibSort Library <reminders@yourdomain.com>`.
 
-Set these in the repository-root `.env` locally and on both the deployed Django service and Celery worker:
+Set these in the repository-root `.env` locally and on the deployed Django web service:
 
 ```dotenv
 RESEND_API_KEY=re_your_private_api_key
 DEFAULT_FROM_EMAIL=LibSort Library <reminders@yourdomain.com>
-CELERY_BROKER_URL=redis://localhost:6379/0
+EMAIL_DELIVERY_MODE=direct
 ```
 
-Replace the example sender and broker URL. `CELERY_RESULT_BACKEND` defaults to the broker URL. The app loads the root `.env`, not `backend/.env`. Old `GMAIL_USER` and `GMAIL_APP_PASSWORD` values are no longer used and can be removed. Keep the key out of frontend variables and version control.
+Replace the example sender. Direct delivery waits for Resend during the request and does not automatically retry failures. Task results are not stored; `CELERY_RESULT_BACKEND` is not needed. The app loads the root `.env`, not `backend/.env`. Old `GMAIL_USER` and `GMAIL_APP_PASSWORD` values are no longer used and can be removed. Keep the key out of frontend variables and version control.
 
-## Run services
+## Optional background delivery
 
-Install `requirements.lock.txt`, run migrations, and start Redis. From the repository root, run Django and Celery in separate terminals:
+For a single web service, keep `EMAIL_DELIVERY_MODE=direct`; only Django is needed. To enable background delivery, set `EMAIL_DELIVERY_MODE=celery` and `CELERY_BROKER_URL` to a reachable Redis URL on both Django and a separate worker. Install `requirements.lock.txt`, run migrations, and start Redis. From the repository root, run Django and Celery in separate terminals:
 
 ```powershell
 .venv/Scripts/python backend/manage.py migrate
@@ -32,7 +32,7 @@ Install `requirements.lock.txt`, run migrations, and start Redis. From the repos
 .venv/Scripts/celery --workdir backend -A config worker --loglevel=info --pool=solo
 ```
 
-On Linux, omit `--pool=solo`. Both processes need the same database and Redis broker. A `memory://` broker cannot pass tasks between separate processes. Restart both services after changing environment settings. The web service alone does not process queued emails.
+On Linux, omit `--pool=solo`. Both processes need the same database and Redis broker. A `memory://` broker cannot pass tasks between separate processes. Restart both services after changing environment settings. In Celery mode, the web service alone does not process queued emails. On Render, use the Internal Key Value URL of a service in the same region, not `localhost:6379`. Start a Background Worker with `celery --workdir backend -A config worker --loglevel=info`. See [Render Celery deployment](https://render.com/docs/deploy-celery).
 
 ## Verify
 
@@ -47,6 +47,6 @@ For live verification, use a loan with a student contact address you control, cl
 - Tasks remain queued: check Redis connectivity and matching API/worker broker configuration.
 - No email received: verify the student's contact and check spam folders and Resend bounce events.
 
-Transport: `backend/core/email_backend.py`. Configuration: `backend/config/settings.py`. HTTPS calls time out after 30 seconds; no SMTP credentials or additional Resend SDK are required.
+Transport: `backend/core/email_backend.py`. Configuration: `backend/config/settings.py`. HTTPS calls use a 10-second socket timeout; no SMTP credentials or additional Resend SDK are required.
 
 References: [Resend domain verification](https://resend.com/docs/dashboard/domains/introduction), [send-email API](https://resend.com/docs/api-reference/emails/send-email).

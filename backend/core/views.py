@@ -1,4 +1,5 @@
 import uuid
+import logging
 from io import BytesIO
 from urllib.parse import parse_qs, urlencode, urlparse
 import qrcode
@@ -173,14 +174,26 @@ def verify(request):
 @api_view(['POST'])
 def remind(request, pk):
     loan = get_object_or_404(BorrowRecord, pk=pk, returned_at__isnull=True)
-    Reminder.objects.create(loan=loan, staff=request.user)
-    
-
-
     if loan.student.contact:
-        # Queue email task asynchronously using Celery
-        send_reminder_email.delay(loan.id)
-        return Response({'detail': 'Email reminder queued.', 'delivery': 'email_queued'}, status=201)
+        try:
+            if settings.EMAIL_DELIVERY_MODE == 'celery':
+                send_reminder_email.delay(loan.id)
+                delivery = 'email_queued'
+                detail = 'Email reminder queued.'
+            else:
+                # Calling directly does not enqueue a task or require Redis.
+                send_reminder_email(loan.id)
+                delivery = 'email_sent'
+                detail = 'Email reminder accepted by the email provider.'
+        except Exception:
+            logging.getLogger(__name__).exception('Reminder delivery failed for loan %s', loan.id)
+            return Response({
+                'detail': 'Could not send the reminder. Ask an administrator to check the email service configuration and logs.',
+                'delivery': 'email_failed',
+            }, status=503)
+        Reminder.objects.create(loan=loan, staff=request.user, delivery=delivery)
+        return Response({'detail': detail, 'delivery': delivery}, status=201)
+    Reminder.objects.create(loan=loan, staff=request.user)
     return Response({'detail': 'Reminder logged, but student has no email.', 'delivery': 'demo_logged'}, status=201)
 
 @api_view(['GET'])

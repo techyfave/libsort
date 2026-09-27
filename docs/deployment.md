@@ -72,4 +72,6 @@ References: [Render Django deployment](https://render.com/docs/deploy-django), [
 
 ## Resend email reminders
 
-Follow [email setup](email_setup.md) to verify your custom sending domain. Set `RESEND_API_KEY`, `DEFAULT_FROM_EMAIL`, and `CELERY_BROKER_URL` on the backend and Celery worker. Run a separate worker with `celery --workdir backend -A config worker --loglevel=info`. Both services need the same database and Redis broker. Restart both after changing credentials. The web service alone does not process queued email.
+Follow [email setup](email_setup.md) to verify your custom sending domain. On the web service, set `RESEND_API_KEY`, `DEFAULT_FROM_EMAIL`, and `EMAIL_DELIVERY_MODE=direct`. Restart/redeploy the web service. This mode does not require Redis or a background worker.
+
+For optional background delivery, set `EMAIL_DELIVERY_MODE=celery` and a reachable `CELERY_BROKER_URL` on both the web service and a separate worker. Use the Render Key Value internal URL, not localhost. Start the worker with `celery --workdir backend -A config worker --loglevel=info`; it also needs the same database and email configuration. Task results are not stored.
